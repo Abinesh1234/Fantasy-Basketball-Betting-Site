@@ -16,11 +16,17 @@ class Team(models.Model):
 
 
 class Matchup(models.Model):
+    class Status(models.TextChoices):
+        UPCOMING = "upcoming"
+        LIVE = "live"
+        FINAL = "final"
+
     week = models.IntegerField()
     home_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="home_matchups")
     away_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="away_matchups")
     home_score = models.FloatField(default=0)
     away_score = models.FloatField(default=0)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.UPCOMING)
 
     class Meta:
         unique_together = ("week", "home_team", "away_team")
