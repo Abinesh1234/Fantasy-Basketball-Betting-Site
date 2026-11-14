@@ -18,7 +18,7 @@ class Command(BaseCommand):
     help = "Sync teams and matchups from the ESPN fantasy league"
 
     def add_arguments(self, parser):
-        parser.add_argument("--week", type=int, help="Matchup week (default: current)")
+        parser.add_argument("--week", type=int, help="Sync a single week (default: all weeks through next week)")
 
     def handle(self, *args, **options):
         try:
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             obj, _ = Team.objects.update_or_create(
                 espn_id=t.team_id,
                 defaults={
-                    "name": t.team_name,
+                    "name": t.team_name.strip(),
                     "owner": owner_name(t),
                     "wins": getattr(t, "wins", 0),
                     "losses": getattr(t, "losses", 0),
@@ -45,21 +45,40 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Synced {len(teams_by_espn_id)} teams"))
 
         # Matchups
-        week = options["week"] or league.currentMatchupPeriod
-        count = 0
-        for m in league.scoreboard(week):
-            home = teams_by_espn_id.get(m.home_team.team_id)
-            away = teams_by_espn_id.get(m.away_team.team_id)
-            if not home or not away:
+        current = league.currentMatchupPeriod
+        weeks = [options["week"]] if options["week"] else range(1, current + 2)
+
+        for week in weeks:
+            if week < current:
+                status = Matchup.Status.FINAL
+            elif week == current:
+                status = Matchup.Status.LIVE
+            else:
+                status = Matchup.Status.UPCOMING
+
+            try:
+                boxes = league.box_scores(matchup_period=week)
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"Week {week}: skipped ({e})"))
                 continue
-            Matchup.objects.update_or_create(
-                week=week,
-                home_team=home,
-                away_team=away,
-                defaults={
-                    "home_score": getattr(m, "home_final_score", 0) or 0,
-                    "away_score": getattr(m, "away_final_score", 0) or 0,
-                },
-            )
-            count += 1
-        self.stdout.write(self.style.SUCCESS(f"Synced {count} matchups for week {week}"))
+
+            count = 0
+            for box in boxes:
+                if not box.home_team or not box.away_team:  # bye week
+                    continue
+                home = teams_by_espn_id.get(box.home_team.team_id)
+                away = teams_by_espn_id.get(box.away_team.team_id)
+                if not home or not away:
+                    continue
+                Matchup.objects.update_or_create(
+                    week=week,
+                    home_team=home,
+                    away_team=away,
+                    defaults={
+                        "home_score": box.home_score or 0,
+                        "away_score": box.away_score or 0,
+                        "status": status,
+                    },
+                )
+                count += 1
+            self.stdout.write(self.style.SUCCESS(f"Synced {count} matchups for week {week} ({status})"))

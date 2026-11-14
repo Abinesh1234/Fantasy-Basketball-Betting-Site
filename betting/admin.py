@@ -11,5 +11,5 @@ class TeamAdmin(admin.ModelAdmin):
 
 @admin.register(Matchup)
 class MatchupAdmin(admin.ModelAdmin):
-    list_display = ("week", "home_team", "away_team", "home_score", "away_score")
-    list_filter = ("week",)
+    list_display = ("week", "home_team", "away_team", "home_score", "away_score", "status")
+    list_filter = ("week", "status")
