@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Hi {{ user.username }}!</h2>
+  <p>Team: {{ profile.team|default:"Not linked yet" }}</p>
+  <p>Balance: {{ balance }} coins</p>
+
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Log Out</button>
+  </form>
+{% endblock %}
