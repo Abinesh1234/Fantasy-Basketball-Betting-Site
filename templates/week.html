@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Upcoming matchups</h2>
+  <p>Balance: {{ balance }} coins</p>
+
+  {% for row in rows %}
+    {% with m=row.matchup %}
+      <div style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+        <strong>Week {{ m.week }}</strong><br>
+        {{ m.away_team }} ({{ row.away_odds }}) @ {{ m.home_team }} ({{ row.home_odds }})
+
+        {% if row.is_mine %}
+          <p><em>Your matchup. Betting not allowed.</em></p>
+        {% else %}
+          <form method="post" action="{% url 'place_bet' %}">
+            {% csrf_token %}
+            <input type="hidden" name="matchup_id" value="{{ m.id }}">
+            <select name="team_id">
+              <option value="{{ m.away_team.id }}">{{ m.away_team }} ({{ row.away_odds }})</option>
+              <option value="{{ m.home_team.id }}">{{ m.home_team }} ({{ row.home_odds }})</option>
+            </select>
+            <input type="number" name="stake" min="1" max="{{ balance }}" placeholder="Coins" required>
+            <button type="submit">Bet</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endwith %}
+  {% empty %}
+    <p>No upcoming matchups. Run <code>python manage.py sync_espn</code>.</p>
+  {% endfor %}
+{% endblock %}
