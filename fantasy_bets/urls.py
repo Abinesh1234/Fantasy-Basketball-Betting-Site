@@ -19,10 +19,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic.base import TemplateView  # new
 
-from betting.views import HomeView
+from betting.views import HomeView, MyBetsView, PlaceBetView, WeekView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", HomeView.as_view(), name="home"),
+    path("week/", WeekView.as_view(), name="week"),
+    path("bet/", PlaceBetView.as_view(), name="place_bet"),
+    path("my-bets/", MyBetsView.as_view(), name="my_bets"),
 ]

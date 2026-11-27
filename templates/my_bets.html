@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>My bets</h2>
+  <table>
+    <tr><th>Week</th><th>Matchup</th><th>Pick</th><th>Stake</th><th>Odds</th><th>Payout</th><th>Status</th></tr>
+    {% for bet in bets %}
+      <tr>
+        <td>{{ bet.matchup.week }}</td>
+        <td>{{ bet.matchup.away_team }} @ {{ bet.matchup.home_team }}</td>
+        <td>{{ bet.pick }}</td>
+        <td>{{ bet.stake }}</td>
+        <td>{{ bet.odds }}</td>
+        <td>{{ bet.payout }}</td>
+        <td>{{ bet.get_status_display }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7">No bets yet.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

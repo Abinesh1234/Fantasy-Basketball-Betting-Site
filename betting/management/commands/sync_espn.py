@@ -56,29 +56,55 @@ class Command(BaseCommand):
             else:
                 status = Matchup.Status.UPCOMING
 
+            # Pairings: scoreboard() is correct for every week, including future ones
             try:
-                boxes = league.box_scores(matchup_period=week)
+                pairings = league.scoreboard(week)
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"Week {week}: skipped ({e})"))
                 continue
 
+            # Scores: box_scores() is only correct up to the current week
+            scores = {}
+            if week <= current:
+                try:
+                    for b in league.box_scores(matchup_period=week):
+                        if b.home_team and b.away_team:
+                            scores[(b.home_team.team_id, b.away_team.team_id)] = (
+                                b.home_score or 0,
+                                b.away_score or 0,
+                            )
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(f"Week {week}: no scores ({e})"))
+
             count = 0
-            for box in boxes:
-                if not box.home_team or not box.away_team:  # bye week
+            seen_ids = []
+            for m in pairings:
+                home_id = getattr(m.home_team, "team_id", None)
+                away_id = getattr(m.away_team, "team_id", None)
+                home = teams_by_espn_id.get(home_id)
+                away = teams_by_espn_id.get(away_id)
+                if not home or not away:  # bye week or unknown team
                     continue
-                home = teams_by_espn_id.get(box.home_team.team_id)
-                away = teams_by_espn_id.get(box.away_team.team_id)
-                if not home or not away:
-                    continue
-                Matchup.objects.update_or_create(
+
+                home_score, away_score = scores.get((home_id, away_id), (0, 0))
+                matchup, _ = Matchup.objects.update_or_create(
                     week=week,
                     home_team=home,
                     away_team=away,
                     defaults={
-                        "home_score": box.home_score or 0,
-                        "away_score": box.away_score or 0,
+                        "home_score": home_score,
+                        "away_score": away_score,
                         "status": status,
                     },
                 )
+                seen_ids.append(matchup.id)
                 count += 1
+
+            # Remove matchups ESPN no longer lists for this week
+            for m in Matchup.objects.filter(week=week).exclude(id__in=seen_ids):
+                if m.bets.exists():
+                    self.stdout.write(self.style.WARNING(f"Stale matchup with bets, review in admin: {m}"))
+                else:
+                    m.delete()
+
             self.stdout.write(self.style.SUCCESS(f"Synced {count} matchups for week {week} ({status})"))
