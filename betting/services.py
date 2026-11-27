@@ -1,6 +1,6 @@
 from django.db import transaction
 
-from .models import Bet, Matchup, Team, Transaction
+from .models import Bet, Matchup, Team, Transaction, first_open_week
 from .odds import matchup_odds
 
 
@@ -15,7 +15,7 @@ def place_bet(user, matchup_id, team_id, stake):
         except Matchup.DoesNotExist:
             raise BetError("That matchup doesn't exist.")
 
-        if matchup.status != Matchup.Status.UPCOMING:
+        if matchup.status != Matchup.Status.UPCOMING or matchup.week < first_open_week():
             raise BetError("Betting is closed for this matchup.")
 
         if team_id == matchup.home_team_id:

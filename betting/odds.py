@@ -22,7 +22,8 @@ def matchup_odds(matchup):
     scores = _team_scores()
     all_scores = [s for team in scores.values() for s in team]
     if not all_scores:
-        return 1.9, 1.9  # no history yet: treat as a coin flip
+        even = round(1 / (0.5) * (1 + HOUSE_EDGE), 2)
+        return even, even
 
     league_avg = mean(all_scores)
     league_sd = pstdev(all_scores) or DEFAULT_SD

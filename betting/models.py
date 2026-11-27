@@ -35,6 +35,17 @@ class Matchup(models.Model):
 
     def __str__(self):
         return f"Week {self.week}: {self.home_team} vs {self.away_team}"
+
+    
+def first_open_week():
+    """The earliest week that hasn't started. Anything before this is closed."""
+    latest_started = (
+        Matchup.objects.exclude(status=Matchup.Status.UPCOMING)
+        .order_by("-week")
+        .values_list("week", flat=True)
+        .first()
+    )
+    return (latest_started or 0) + 1
     
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
